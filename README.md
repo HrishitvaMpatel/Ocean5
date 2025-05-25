@@ -79,7 +79,7 @@ The app will open in your default web browser, typically at http://localhost:850
    - One agent will ask a question each round
    - Other agents will respond based on their personalities
    - The killer will try to avoid detection while maintaining their personality
-4. After 5 rounds, a voting phase will begin
+4. After 3 rounds, a voting phase will begin
    - Agents will vote on who they believe is the killer
    - If the killer receives 3 or more votes, they are caught
    - If not, the game continues for more rounds
@@ -99,8 +99,8 @@ The core simulation loop:
 1. An agent is selected as the questioner for the current round
 2. The questioner generates a question based on their personality
 3. Other agents respond to the question, with the killer providing deceptive answers
-4. After 5 rounds, agents vote on who they believe is the killer
-5. Game concludes when the killer is correctly identified or after 10 rounds
+4. After 3 rounds, agents vote on who they believe is the killer
+5. Game concludes when the 3 or more of the 5 agents agree on a vote.
 
 ## Game Results
 
