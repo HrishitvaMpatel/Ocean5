@@ -18,7 +18,6 @@ from utils import save_game_results
 # Load environment variables
 load_dotenv()
 
-
 def run_single_game(model_name, game_id=None):
     """Run a single game with the specified model and return the results"""
     if game_id is None:
@@ -29,12 +28,10 @@ def run_single_game(model_name, game_id=None):
     # Initialize game engine
     game_engine = GameEngine(model_name)
     game_log = []
-    votes = {}
-    outcome = None
     rounds_played = 0
+    max_rounds = 50
 
-    # Run rounds 1-5 without voting
-    for round_num in range(1, 6):
+    for round_num in range(1, max_rounds + 1):
         try:
             round_results = game_engine.run_round(round_num)
             game_log.append(round_results)
@@ -43,95 +40,71 @@ def run_single_game(model_name, game_id=None):
             print(f"Error in round {round_num} of game {game_id}: {str(e)}")
             return None
 
-    # After round 5, after each round, conduct voting and check for majority
-    for round_num in range(6, 21):
-        try:
-            # Conduct voting after round 5 and after each subsequent round
-            votes = game_engine.conduct_voting()
-            vote_counts = {}
-            for agent, vote_info in votes.items():
-                target = vote_info["vote"]
-                vote_counts[target] = vote_counts.get(target, 0) + 1
+        # Conduct voting every 3 rounds
+        if round_num % 3 == 0:
+            try:
+                votes = game_engine.conduct_voting()
+                vote_counts = {}
+                for agent, vote_info in votes.items():
+                    target = vote_info["vote"]
+                    vote_counts[target] = vote_counts.get(target, 0) + 1
 
-            # Check for majority (3+ votes for any agent)
-            majority_agent = None
-            for agent, count in vote_counts.items():
-                if count >= 3:
-                    majority_agent = agent
-                    break
-
-            outcome = {
-                "majority_found": majority_agent is not None,
-                "majority_agent": majority_agent,
-                "vote_distribution": vote_counts,
-                "rounds_played": rounds_played,
-                "correctly_identified": majority_agent == game_engine.killer.name
-                if majority_agent
-                else False,
-            }
-
-            # Compile results and save after each voting
-            results = {
-                "game_id": game_id,
-                "model": model_name,
-                "actual_killer": game_engine.killer.name,
-                "rounds": list(game_log),
-                "votes": dict(votes),
-                "outcome": dict(outcome),
-            }
-            save_game_results(results)
-
-            if majority_agent:
-                print(
-                    f"Game {game_id} completed. Majority vote for {majority_agent}. Killer: {game_engine.killer.name}. Correctly identified: {outcome['correctly_identified']} by {model_name} LLM."
+                majority_agent = next(
+                    (a for a, c in vote_counts.items() if c >= 3), None
                 )
-                return results
 
-            # If not, play next round
-            if round_num <= 10:
-                try:
-                    round_results = game_engine.run_round(round_num)
-                    game_log.append(round_results)
-                    rounds_played += 1
-                except Exception as e:
-                    print(f"Error in round {round_num} of game {game_id}: {str(e)}")
-                    return None
-        except Exception as e:
-            print(
-                f"Error in voting after round {round_num - 1} of game {game_id}: {str(e)}"
-            )
-            return None
+                outcome = {
+                    "majority_found": majority_agent is not None,
+                    "majority_agent": majority_agent,
+                    "vote_distribution": vote_counts,
+                    "rounds_played": rounds_played,
+                    "correctly_identified": majority_agent == game_engine.killer.name
+                    if majority_agent
+                    else False,
+                }
 
-    # If no majority after 10 rounds, conduct final voting
-    try:
-        votes = game_engine.conduct_voting()
-        vote_counts = {}
-        for agent, vote_info in votes.items():
-            target = vote_info["vote"]
-            vote_counts[target] = vote_counts.get(target, 0) + 1
-        majority_agent = None
-        for agent, count in vote_counts.items():
-            if count >= 3:
-                majority_agent = agent
-                break
-        outcome = {
-            "majority_found": majority_agent is not None,
-            "majority_agent": majority_agent,
-            "vote_distribution": vote_counts,
-            "rounds_played": rounds_played,
-            "correctly_identified": majority_agent == game_engine.killer.name
-            if majority_agent
-            else False,
-        }
-        results = {
-            "game_id": game_id,
-            "model": model_name,
-            "actual_killer": game_engine.killer.name,
-            "rounds": list(game_log),
-            "votes": dict(votes),
-            "outcome": dict(outcome),
-        }
-        save_game_results(results)
+                results = {
+                    "game_id": game_id,
+                    "model": model_name,
+                    "actual_killer": game_engine.killer.name,
+                    "rounds": list(game_log),
+                    "votes": dict(votes),
+                    "outcome": dict(outcome),
+                }
+
+                save_game_results(results)
+
+                if majority_agent:
+                    print(
+                        f"Game {game_id} completed. Majority vote for {majority_agent}. "
+                        f"Killer: {game_engine.killer.name}. Correctly identified: {outcome['correctly_identified']} "
+                        f"by {model_name} LLM."
+                    )
+                    return results
+
+            except Exception as e:
+                print(f"Error in voting after round {round_num} of game {game_id}: {str(e)}")
+                return None
+
+    # If no majority found by max_rounds, save final outcome
+    print(f"Game {game_id} ended after {max_rounds} rounds without majority.")
+    final_outcome = {
+        "majority_found": False,
+        "majority_agent": None,
+        "vote_distribution": {},
+        "rounds_played": rounds_played,
+        "correctly_identified": False,
+    }
+    results = {
+        "game_id": game_id,
+        "model": model_name,
+        "actual_killer": game_engine.killer.name,
+        "rounds": list(game_log),
+        "votes": {},
+        "outcome": dict(final_outcome),
+    }
+    save_game_results(results)
+    return results
         print(
             f"Game {game_id} completed after 10 rounds. Majority vote for {majority_agent}. Killer: {game_engine.killer.name}. Correctly identified: {outcome['correctly_identified']} by {model_name} LLM."
         )
