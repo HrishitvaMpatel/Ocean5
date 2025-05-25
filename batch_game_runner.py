@@ -104,11 +104,12 @@ def run_single_game(model_name, game_id=None):
         "outcome": dict(final_outcome),
     }
     save_game_results(results)
+    print(
+        f"Game {game_id} completed after {rounds_played} rounds. "
+        f"Majority vote for {majority_agent}. Killer: {game_engine.killer.name}. "
+        f"Correctly identified: {outcome['correctly_identified']} by {model_name} LLM."
+    )
     return results
-        print(
-            f"Game {game_id} completed after 10 rounds. Majority vote for {majority_agent}. Killer: {game_engine.killer.name}. Correctly identified: {outcome['correctly_identified']} by {model_name} LLM."
-        )
-        return results
     except Exception as e:
         print(f"Error in final voting of game {game_id}: {str(e)}")
         return None
