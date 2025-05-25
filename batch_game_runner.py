@@ -110,9 +110,6 @@ def run_single_game(model_name, game_id=None):
         f"Correctly identified: {outcome['correctly_identified']} by {model_name} LLM."
     )
     return results
-    except Exception as e:
-        print(f"Error in final voting of game {game_id}: {str(e)}")
-        return None
 
 
 def get_existing_game_counts():
